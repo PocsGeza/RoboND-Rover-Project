@@ -1,4 +1,4 @@
-# Do the necessary imports
+# region Do the necessary imports
 import argparse
 import shutil
 import base64
@@ -21,25 +21,34 @@ import time
 from perception import perception_step
 from decision import decision_step
 from supporting_functions import update_rover, create_output_images
-# Initialize socketio server and Flask application 
+# endregion
+
+
+# region Initialize socketio server and Flask application
 # (learn more at: https://python-socketio.readthedocs.io/en/latest/)
 sio = socketio.Server()
 app = Flask(__name__)
+# endregion
 
-# Read in ground truth map and create 3-channel green version for overplotting
+
+# region Read in ground truth map and create 3-channel green version for overplotting
 # NOTE: images are read in by default with the origin (0, 0) in the upper left
 # and y-axis increasing downward.
-ground_truth = mpimg.imread('../calibration_images/map_bw.png')
+ground_truth = mpimg.imread(
+    'C:/Users/pocs.geza/Desktop/Udacity/RoboND-Rover-Project/calibration_images/map_bw.png')
 # This next line creates arrays of zeros in the red and blue channels
 # and puts the map into the green channel.  This is why the underlying 
 # map output looks green in the display image
 ground_truth_3d = np.dstack((ground_truth*0, ground_truth*255, ground_truth*0)).astype(np.float)
+# endregion
 
-# Define RoverState() class to retain rover state parameters
+
+# region Define RoverState()  class to retain rover state parameters
 class RoverState():
     def __init__(self):
         self.start_time = None # To record the start time of navigation
-        self.total_time = None # To record total duration of naviagation
+        self.total_time = None # To record total duration of navigation
+        self.counter = 0  # To count the number of images received
         self.img = None # Current camera image
         self.pos = None # Current position (x, y)
         self.yaw = None # Current yaw angle
@@ -59,7 +68,7 @@ class RoverState():
         # of navigable terrain pixels.  This is a very crude form of knowing
         # when you can keep going and when you should stop.  Feel free to
         # get creative in adding new fields or modifying these!
-        self.stop_forward = 50 # Threshold to initiate stopping
+        self.stop_forward = 100 # Threshold to initiate stopping
         self.go_forward = 500 # Threshold to go forward again
         self.max_vel = 2 # Maximum velocity (meters/second)
         # Image output from perception step
@@ -77,23 +86,29 @@ class RoverState():
         self.near_sample = 0 # Will be set to telemetry value data["near_sample"]
         self.picking_up = 0 # Will be set to telemetry value data["picking_up"]
         self.send_pickup = False # Set to True to trigger rock pickup
+
+
 # Initialize our rover 
 Rover = RoverState()
 
-# Variables to track frames per second (FPS)
+# endregion
+
+
+# region Variables to track frames per second (FPS)
 # Intitialize frame counter
 frame_counter = 0
 # Initalize second counter
 second_counter = time.time()
 fps = None
+# endregion
 
 
-# Define telemetry function for what to do with incoming data
+# region Define telemetry function for what to do with incoming data
 @sio.on('telemetry')
 def telemetry(sid, data):
 
     global frame_counter, second_counter, fps
-    frame_counter+=1
+    frame_counter += 1
     # Do a rough calculation of frames per second (FPS)
     if (time.time() - second_counter) > 1:
         fps = frame_counter
@@ -147,7 +162,10 @@ def telemetry(sid, data):
 
     else:
         sio.emit('manual', data={}, skip_sid=True)
+# endregion
 
+
+# region Define connection
 @sio.on('connect')
 def connect(sid, environ):
     print("connect ", sid)
@@ -157,7 +175,10 @@ def connect(sid, environ):
         "get_samples",
         sample_data,
         skip_sid=True)
+# endregion
 
+
+# region Define control to end commands
 def send_control(commands, image_string1, image_string2):
     # Define commands to be sent to the rover
     data={
@@ -173,7 +194,10 @@ def send_control(commands, image_string1, image_string2):
         data,
         skip_sid=True)
     eventlet.sleep(0)
-# Define a function to send the "pickup" command 
+# endregion
+
+
+# region Define a function to send the "pickup" command
 def send_pickup():
     print("Picking up")
     pickup = {}
@@ -182,6 +206,9 @@ def send_pickup():
         pickup,
         skip_sid=True)
     eventlet.sleep(0)
+# endregion
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Remote Driving')
     parser.add_argument(
@@ -193,7 +220,7 @@ if __name__ == '__main__':
     )
     args = parser.parse_args()
     
-    #os.system('rm -rf IMG_stream/*')
+    # os.system('rm -rf IMG_stream/*')
     if args.image_folder != '':
         print("Creating image folder at {}".format(args.image_folder))
         if not os.path.exists(args.image_folder):
